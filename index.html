@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Aju's Tracker</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#0a0a0f" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Aju's Tracker" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --gold: #c8a96e;
+      --gold-light: #e8c98e;
+      --bg: #0a0a0f;
+      --card: #13131a;
+      --border: #1e1e2a;
+      --text: #f0ece4;
+      --muted: #888;
+      --done: #2a2210;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(10,10,15,0.92);
+      backdrop-filter: blur(12px);
+      padding: 1rem 1.2rem 0.8rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .title-label {
+      font-size: 0.6rem;
+      letter-spacing: 0.3em;
+      color: var(--gold);
+      text-transform: uppercase;
+    }
+
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.4rem;
+      font-weight: 400;
+      color: var(--text);
+    }
+
+    .month-label { color: var(--muted); font-size: 0.75rem; }
+
+    .stats-row {
+      display: flex;
+      gap: 0.6rem;
+      margin-top: 0.8rem;
+    }
+
+    .stat {
+      flex: 1;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.5rem 0.4rem;
+      text-align: center;
+    }
+
+    .stat-val {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.2rem;
+      color: var(--gold);
+    }
+
+    .stat-label {
+      font-size: 0.55rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .progress-bar {
+      height: 3px;
+      background: var(--border);
+      border-radius: 99px;
+      margin-top: 0.8rem;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--gold), var(--gold-light));
+      border-radius: 99px;
+      transition: width 0.4s ease;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.6rem;
+      padding: 1rem;
+    }
+
+    .day-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 0.75rem;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      user-select: none;
+    }
+
+    .day-card.perfect {
+      background: var(--done);
+      border-color: var(--gold);
+    }
+
+    .day-card.today {
+      border-color: #444;
+    }
+
+    .day-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .day-lbl {
+      font-size: 0.55rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .day-lbl.today-lbl { color: var(--gold); }
+
+    .day-num {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.1rem;
+      line-height: 1;
+    }
+
+    .day-num.perfect-num { color: var(--gold); }
+
+    .score-badge {
+      font-size: 0.65rem;
+      color: var(--muted);
+    }
+
+    .score-badge.has-score { color: var(--gold); }
+
+    .dots {
+      display: flex;
+      gap: 3px;
+      margin-top: 0.5rem;
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--border);
+      transition: background 0.2s;
+    }
+
+    .dot.done { background: var(--gold); }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 100;
+      display: flex;
+      align-items: flex-end;
+      backdrop-filter: blur(4px);
+      animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+
+    .modal {
+      background: #0f0f17;
+      border: 1px solid var(--border);
+      border-radius: 20px 20px 0 0;
+      padding: 1.5rem 1.2rem;
+      width: 100%;
+      animation: slideUp 0.25s ease;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(40px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .modal-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.3rem;
+      margin-bottom: 1.2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .close-btn {
+      background: var(--border);
+      border: none;
+      color: var(--muted);
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .habit-row {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      padding: 0.9rem 0;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+    }
+
+    .habit-row:last-child { border-bottom: none; }
+
+    .checkbox {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      border: 1.5px solid #444;
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      flex-shrink: 0;
+      transition: all 0.15s;
+      color: #0f0f17;
+      font-weight: bold;
+    }
+
+    .checkbox.checked {
+      background: var(--gold);
+      border-color: var(--gold);
+    }
+
+    .habit-name {
+      font-size: 0.9rem;
+      color: var(--muted);
+      transition: color 0.15s;
+    }
+
+    .habit-name.checked { color: var(--text); }
+
+    .habit-icon { font-size: 1.1rem; }
+
+    .legend {
+      text-align: center;
+      color: #444;
+      font-size: 0.7rem;
+      padding: 0.5rem 1rem 2rem;
+      letter-spacing: 0.05em;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <div>
+      <div class="title-label">30-Day Transformation</div>
+      <h1>Aju's Tracker</h1>
+      <div class="month-label" id="monthLabel"></div>
+    </div>
+  </div>
+  <div class="stats-row">
+    <div class="stat">
+      <div class="stat-val" id="statPct">0%</div>
+      <div class="stat-label">Done</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" id="statPerfect">0</div>
+      <div class="stat-label">⭐ Days</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" id="statStreak">0</div>
+      <div class="stat-label">Streak</div>
+    </div>
+  </div>
+  <div class="progress-bar">
+    <div class="progress-fill" id="progressFill" style="width:0%"></div>
+  </div>
+</header>
+
+<div class="grid" id="grid"></div>
+<div class="legend">Tap any day · ⭐ = Perfect day</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal" style="display:none" onclick="closeModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title">
+      <span id="modalTitle">Day 1</span>
+      <button class="close-btn" onclick="closeModal()">✕</button>
+    </div>
+    <div id="habitList"></div>
+  </div>
+</div>
+
+<script>
+  const HABITS = [
+    { id: "walk",    label: "Brisk Walk 1hr",  icon: "🚶" },
+    { id: "workout", label: "Workout 2hrs",     icon: "💪" },
+    { id: "diet",    label: "Diet on Track",    icon: "🥗" },
+    { id: "water",   label: "Water 2-3L",       icon: "💧" },
+    { id: "sleep",   label: "Sleep 7-8hrs",     icon: "😴" },
+  ];
+
+  const DAYS = 30;
+  let data = JSON.parse(localStorage.getItem("aju-tracker") || "{}");
+  let openDay = null;
+
+  const save = () => localStorage.setItem("aju-tracker", JSON.stringify(data));
+  const key = (d, h) => `${d}-${h}`;
+  const isDone = (d, h) => !!data[key(d, h)];
+  const score = (d) => HABITS.filter(h => isDone(d, h.id)).length;
+  const isPerfect = (d) => score(d) === HABITS.length;
+
+  function getStreak() {
+    let streak = 0;
+    const today = new Date().getDate();
+    for (let d = today; d >= 1; d--) {
+      if (isPerfect(d)) streak++;
+      else break;
+    }
+    return streak;
+  }
+
+  function updateStats() {
+    const total = Object.values(data).filter(Boolean).length;
+    const possible = DAYS * HABITS.length;
+    const pct = Math.round((total / possible) * 100);
+    const perfectDays = Array.from({length: DAYS}, (_, i) => i+1).filter(isPerfect).length;
+
+    document.getElementById("statPct").textContent = pct + "%";
+    document.getElementById("statPerfect").textContent = perfectDays;
+    document.getElementById("statStreak").textContent = getStreak();
+    document.getElementById("progressFill").style.width = pct + "%";
+  }
+
+  function renderGrid() {
+    const grid = document.getElementById("grid");
+    const today = new Date().getDate();
+    grid.innerHTML = "";
+    for (let d = 1; d <= DAYS; d++) {
+      const s = score(d);
+      const perfect = isPerfect(d);
+      const isToday = d === today;
+
+      const card = document.createElement("div");
+      card.className = "day-card" + (perfect ? " perfect" : "") + (isToday ? " today" : "");
+      card.onclick = () => openModal(d);
+
+      card.innerHTML = `
+        <div class="day-header">
+          <div>
+            <div class="day-lbl ${isToday ? "today-lbl" : ""}">${isToday ? "Today" : "Day"}</div>
+            <div class="day-num ${perfect ? "perfect-num" : ""}">${d}</div>
+          </div>
+          <div class="score-badge ${s > 0 ? "has-score" : ""}">${perfect ? "⭐" : s + "/" + HABITS.length}</div>
+        </div>
+        <div class="dots">
+          ${HABITS.map(h => `<div class="dot ${isDone(d, h.id) ? "done" : ""}"></div>`).join("")}
+        </div>
+      `;
+      grid.appendChild(card);
+    }
+    updateStats();
+  }
+
+  function openModal(day) {
+    openDay = day;
+    const today = new Date().getDate();
+    document.getElementById("modalTitle").textContent =
+      day === today ? "Today · Day " + day : "Day " + day;
+
+    const list = document.getElementById("habitList");
+    list.innerHTML = HABITS.map(h => {
+      const done = isDone(day, h.id);
+      return `
+        <div class="habit-row" onclick="toggleHabit(${day}, '${h.id}')">
+          <div class="checkbox ${done ? "checked" : ""}" id="cb-${day}-${h.id}">${done ? "✓" : ""}</div>
+          <span class="habit-icon">${h.icon}</span>
+          <span class="habit-name ${done ? "checked" : ""}" id="hn-${day}-${h.id}">${h.label}</span>
+        </div>
+      `;
+    }).join("");
+
+    document.getElementById("modal").style.display = "flex";
+    document.body.style.overflow = "hidden";
+  }
+
+  function toggleHabit(day, habitId) {
+    const k = key(day, habitId);
+    data[k] = !data[k];
+    save();
+
+    const done = data[k];
+    const cb = document.getElementById(`cb-${day}-${habitId}`);
+    const hn = document.getElementById(`hn-${day}-${habitId}`);
+    cb.className = "checkbox" + (done ? " checked" : "");
+    cb.textContent = done ? "✓" : "";
+    hn.className = "habit-name" + (done ? " checked" : "");
+
+    renderGrid();
+  }
+
+  function closeModal(e) {
+    if (e && e.target !== document.getElementById("modal")) return;
+    document.getElementById("modal").style.display = "none";
+    document.body.style.overflow = "";
+    openDay = null;
+  }
+
+  // Month label
+  document.getElementById("monthLabel").textContent =
+    new Date().toLocaleString("default", { month: "long", year: "numeric" });
+
+  // Service worker
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
+
+  renderGrid();
+</script>
+</body>
+</html>
